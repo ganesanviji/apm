@@ -225,9 +225,10 @@ def findings_to_markdown(
     ]
     for f in sorted_findings:
         sev = f.severity.upper()
+        escaped_description = f.description.replace('|', r'\|')
         lines.append(
             f"| {sev} | `{relative_path_for_report(f.file)}` | {f.line}:{f.column}"
-            f" | `{f.codepoint}` | {f.description.replace('|', '\\|')} |"
+            f" | `{f.codepoint}` | {escaped_description} |"
         )
     lines.append("")
     lines.append("Run `apm audit --strip` to remove flagged characters.\n")
