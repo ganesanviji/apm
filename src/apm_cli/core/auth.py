@@ -618,14 +618,14 @@ class AuthResolver:
         # ADO uses ADO_APM_PAT (single var) + AAD bearer fallback;
         # per-org vars and credential fill are out of scope.
 
-        # 1. Per-org env var (GitHub-like hosts only)
-        if org and host_info.kind not in ("ado",):
+        # 1. Per-org env var (GitHub/GHES/GHE-Cloud hosts only; not ADO or generic)
+        if org and host_info.kind not in ("ado", "generic"):
             env_name = f"GITHUB_APM_PAT_{_org_to_env_suffix(org)}"
             token = os.environ.get(env_name)
             if token:
                 return token, env_name, "basic"
 
-        # 2. Global env var chain (any host)
+        # 2. Global env var chain (host-specific purpose)
         purpose = self._purpose_for_host(host_info)
         token = self._token_manager.get_token_for_purpose(purpose)
         if token:
@@ -646,6 +646,8 @@ class AuthResolver:
     def _purpose_for_host(host_info: HostInfo) -> str:
         if host_info.kind == "ado":
             return "ado_modules"
+        if host_info.kind == "generic":
+            return "generic_modules"
         return "modules"
 
     def _identify_env_source(self, purpose: str) -> str:

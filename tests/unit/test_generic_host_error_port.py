@@ -108,6 +108,14 @@ class TestGenericHostCloneErrorPort:
             f"bare-host case must not synthesise a stray ':' suffix: {prefix!r}"
         )
 
+    def test_error_mentions_generic_apm_token(self):
+        """Error hint must reference GENERIC_APM_TOKEN for discoverability."""
+        dep = DependencyReference.parse(
+            "https://gitea.mycompany.com/team/repo.git"
+        )
+        prefix = _diagnostic_prefix(self._clone_error(dep))
+        assert "GENERIC_APM_TOKEN" in prefix
+
 
 class TestGenericHostLsRemoteErrorPort:
     """``list_remote_refs`` generic branch (github_downloader.py ~L1035)."""
@@ -155,3 +163,11 @@ class TestGenericHostLsRemoteErrorPort:
         assert "gitlab.example.com:" not in prefix, (
             f"bare-host case must not synthesise a stray ':' suffix: {prefix!r}"
         )
+
+    def test_error_mentions_generic_apm_token(self):
+        """Error hint must reference GENERIC_APM_TOKEN for discoverability."""
+        dep = DependencyReference.parse(
+            "https://gitea.mycompany.com/team/repo.git"
+        )
+        prefix = _diagnostic_prefix(self._ls_remote_error(dep))
+        assert "GENERIC_APM_TOKEN" in prefix

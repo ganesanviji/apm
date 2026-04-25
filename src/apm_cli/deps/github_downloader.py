@@ -475,9 +475,9 @@ class GitHubPackageDownloader:
     def _resolve_dep_token(self, dep_ref: Optional[DependencyReference] = None) -> Optional[str]:
         """Resolve the per-dependency auth token via AuthResolver.
 
-        GitHub and ADO hosts use the token resolved by AuthResolver.
-        Generic hosts (GitLab, Bitbucket, etc.) return None so git
-        credential helpers can provide credentials instead.
+        GitHub, ADO, and generic hosts (Gitea, GitLab, Bitbucket, etc.) all
+        use the token resolved by AuthResolver.  Generic hosts resolve via
+        ``GENERIC_APM_TOKEN`` and then git credential helpers.
 
         Args:
             dep_ref: Optional dependency reference for host/org lookup.
@@ -488,40 +488,20 @@ class GitHubPackageDownloader:
         if dep_ref is None:
             return self.github_token
 
-        is_ado = dep_ref.is_azure_devops()
-        dep_host = dep_ref.host
-        if dep_host:
-            is_github = is_github_hostname(dep_host)
-        else:
-            is_github = True
-        is_generic = not is_ado and not is_github
-
-        if is_generic:
-            return None
-
         dep_ctx = self.auth_resolver.resolve_for_dep(dep_ref)
         return dep_ctx.token
 
     def _resolve_dep_auth_ctx(self, dep_ref: Optional[DependencyReference] = None) -> Optional[AuthContext]:
         """Resolve the full AuthContext for a dependency.
 
-        Returns the AuthContext from AuthResolver, or None for generic hosts
-        or when no dep_ref is provided.
+        Returns the AuthContext from AuthResolver for all host types (GitHub,
+        ADO, and generic hosts such as Gitea, GitLab, Bitbucket).
+        Returns None only when no dep_ref is provided.
         """
         if dep_ref is None:
             return None
 
-        is_ado = dep_ref.is_azure_devops()
         dep_host = dep_ref.host
-        if dep_host:
-            is_github = is_github_hostname(dep_host)
-        else:
-            is_github = True
-        is_generic = not is_ado and not is_github
-
-        if is_generic:
-            return None
-
         ctx = self.auth_resolver.resolve_for_dep(dep_ref)
         # Verbose source surfacing (#852): one-time per-host log line so users
         # can see which credential source was actually used. Routed through
@@ -775,10 +755,17 @@ class GitHubPackageDownloader:
                 netloc = f"{host}:{port}" if port else host
                 return f"http://{netloc}/{repo_ref}.git"
             elif is_github and github_token:
-                # Only send GitHub tokens to GitHub hosts
+                # Only send GitHub instance tokens to GitHub hosts.
                 return build_https_clone_url(host, repo_ref, token=github_token, port=port)
+            elif not is_github and token:
+                # For generic hosts (Gitea, GitLab, Bitbucket, etc.), embed the token ONLY when
+                # one was explicitly resolved for that host (GENERIC_APM_TOKEN or git credential
+                # fill).  We must NOT fall back to self.github_token here — a GitHub PAT must
+                # never be sent to a third-party server.
+                return build_https_clone_url(host, repo_ref, token=token, port=port)
             else:
-                # Generic hosts: plain HTTPS, let git credential helpers handle auth
+                # No host-appropriate token available — plain HTTPS, let git credential helpers
+                # handle auth (SSH agent, macOS Keychain, Windows Credential Manager, etc.)
                 return build_https_clone_url(host, repo_ref, token=None, port=port)
 
     def _clone_with_fallback(self, repo_url_base: str, target_path: Path, progress_reporter=None, dep_ref: DependencyReference = None, verbose_callback=None, **clone_kwargs) -> Repo:
@@ -1022,8 +1009,10 @@ class GitHubPackageDownloader:
             else:
                 host_name = "the target host"
             error_msg += (
-                f"For private repositories on {host_name}, configure SSH keys or a git credential helper. "
-                f"APM delegates authentication to git for non-GitHub/ADO hosts."
+                f"For private repositories on {host_name}, set GENERIC_APM_TOKEN to a "
+                f"Personal Access Token (or equivalent) for that host, or configure SSH keys / "
+                f"a git credential helper. "
+                f"Example: export GENERIC_APM_TOKEN=<your-token>"
             )
         elif configured_host and dep_host and dep_host == configured_host and configured_host != "github.com":
             suggested = f"github.com/{repo_url_base}"
@@ -1244,9 +1233,10 @@ class GitHubPackageDownloader:
                 else:
                     host_name = "the target host"
                 error_msg += (
-                    f"For private repositories on {host_name}, configure SSH keys "
-                    f"or a git credential helper. "
-                    f"APM delegates authentication to git for non-GitHub/ADO hosts."
+                    f"For private repositories on {host_name}, set GENERIC_APM_TOKEN to a "
+                    f"Personal Access Token (or equivalent) for that host, or configure SSH keys / "
+                    f"a git credential helper. "
+                    f"Example: export GENERIC_APM_TOKEN=<your-token>"
                 )
             else:
                 host = dep_host or default_host()
