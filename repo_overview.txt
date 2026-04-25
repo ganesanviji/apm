@@ -1,0 +1,10 @@
+1. APM (Agent Package Manager) is an open-source, community-driven dependency manager for AI agents.
+2. It lets developers declare agentic dependencies once in an `apm.yml` file, similar to `package.json` or `requirements.txt`.
+3. APM supports multiple AI coding clients, including GitHub Copilot, Claude Code, Cursor, OpenCode, and Codex.
+4. Running `apm install` reproduces a fully configured agent setup across every machine and client in seconds.
+5. It supports transitive dependency resolution, meaning packages can depend on other packages and APM resolves the full tree.
+6. APM is "Secure by default" — every install scans for hidden Unicode and other threats that could hijack agent behavior.
+7. A lockfile (`apm.lock.yaml`) pins resolved sources and content hashes, ensuring full provenance and integrity.
+8. Enterprise governance is supported via `apm-policy.yml`, allowing security teams to restrict allowed sources and primitives org-wide.
+9. APM supports installing dependencies from GitHub, GitLab, Bitbucket, Azure DevOps, and any git host.
+10. It includes tools to author, pack, and distribute plugins — exporting standard `plugin.json` packages compatible with major AI clients.
