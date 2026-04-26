@@ -77,3 +77,8 @@ markers = [
     "slow: marks tests as slow running tests",
     "benchmark: marks performance benchmark tests (deselected by default, run with -m benchmark)",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

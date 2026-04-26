@@ -1398,11 +1398,14 @@ class TestDownloaderCredentialFallback:
                 assert actual_headers.get('Authorization') == 'token enterprise-token'
 
     def test_non_default_host_uses_global_token(self):
-        """Global env vars (GITHUB_APM_PAT) are now tried for all hosts, not just the default."""
-        with patch.dict(os.environ, {'GITHUB_APM_PAT': 'default-host-pat'}, clear=True), \
-             patch(
-                 'apm_cli.core.token_manager.GitHubTokenManager.resolve_credential_from_git',
-             ) as mock_cred:
+        """GITHUB_APM_PAT is used for GHES hosts (classified via GITHUB_HOST env var)."""
+        with patch.dict(
+            os.environ,
+            {'GITHUB_APM_PAT': 'default-host-pat', 'GITHUB_HOST': 'ghes.company.com'},
+            clear=True,
+        ), patch(
+            'apm_cli.core.token_manager.GitHubTokenManager.resolve_credential_from_git',
+        ) as mock_cred:
             mock_cred.return_value = 'enterprise-cred'
             downloader = GitHubPackageDownloader()
             assert downloader.github_token == 'default-host-pat'
@@ -1422,7 +1425,7 @@ class TestDownloaderCredentialFallback:
                 assert result == b'enterprise content'
 
                 actual_headers = mock_get.call_args[1].get('headers') or mock_get.call_args[0][1]
-                # Global PAT is now used for non-default hosts too
+                # GITHUB_APM_PAT is forwarded to GHES hosts (classified via GITHUB_HOST)
                 assert actual_headers.get('Authorization') == 'token default-host-pat'
 
             # Credential fill is not reached because the global env var is found first
@@ -1873,13 +1876,14 @@ class TestGiteaRawUrlDownload:
     def test_raw_url_with_token_adds_auth_header(self):
         """Token is forwarded as Authorization header in the raw URL request.
 
+        Generic hosts (Gitea, GitLab, etc.) use GIT_APM_PAT, not GITHUB_APM_PAT.
         Token resolution is lazy, so the env patch must stay active for the
         duration of the download call.
         """
         dep_ref = DependencyReference.parse("gitea.myorg.com/owner/repo")
         raw_ok = _make_resp(200, b"data")
 
-        with patch.dict(os.environ, {"GITHUB_APM_PAT": "gta-tok"}, clear=True):
+        with patch.dict(os.environ, {"GIT_APM_PAT": "gta-tok"}, clear=True):
             with _CRED_FILL_PATCH:
                 downloader = GitHubPackageDownloader()
             with patch.object(downloader, "_resilient_get", return_value=raw_ok) as mock_get:
