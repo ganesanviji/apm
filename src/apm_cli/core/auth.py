@@ -552,9 +552,18 @@ class AuthResolver:
                 )
         else:
             lines.append("No token available.")
-            lines.append(
-                "Set GITHUB_APM_PAT or GITHUB_TOKEN, or run 'gh auth login'."
-            )
+            if host_info.kind == "generic":
+                lines.append(
+                    "Set GIT_APM_PAT to a personal access token with read access to this repository. "
+                    "Example: export GIT_APM_PAT=your_token"
+                )
+                lines.append(
+                    "Alternatively, configure SSH keys or a git credential helper for this host."
+                )
+            else:
+                lines.append(
+                    "Set GITHUB_APM_PAT or GITHUB_TOKEN, or run 'gh auth login'."
+                )
 
         if org and host_info.kind != "ado":
             lines.append(
@@ -593,6 +602,10 @@ class AuthResolver:
         2. AAD bearer via ``az cli`` -> scheme ``"bearer"``
         3. None -> source ``"none"``
 
+        Resolution order (generic git hosts — Gitea, GitLab, Bitbucket, etc.):
+        1. ``GIT_APM_PAT`` env var -> scheme ``"basic"``
+        2. Git credential helper
+
         All token-bearing requests use HTTPS, which is the transport
         security boundary.  Host-gating global env vars is unnecessary
         and creates DX friction for multi-host setups.
@@ -617,6 +630,20 @@ class AuthResolver:
 
         # ADO uses ADO_APM_PAT (single var) + AAD bearer fallback;
         # per-org vars and credential fill are out of scope.
+
+        # Generic hosts (Gitea, GitLab, Bitbucket, self-hosted): check GIT_APM_PAT first,
+        # then fall back to git credential helpers.  GitHub-specific env vars are NOT
+        # forwarded to generic hosts to avoid leaking tokens cross-host.
+        if host_info.kind == "generic":
+            git_pat = self._token_manager.get_token_for_purpose("generic_modules")
+            if git_pat:
+                return git_pat, "GIT_APM_PAT", "basic"
+            credential = self._token_manager.resolve_credential_from_git(
+                host_info.host, port=host_info.port
+            )
+            if credential:
+                return credential, "git-credential-fill", "basic"
+            return None, "none", "basic"
 
         # 1. Per-org env var (GitHub-like hosts only)
         if org and host_info.kind not in ("ado",):
@@ -646,6 +673,8 @@ class AuthResolver:
     def _purpose_for_host(host_info: HostInfo) -> str:
         if host_info.kind == "ado":
             return "ado_modules"
+        if host_info.kind == "generic":
+            return "generic_modules"
         return "modules"
 
     def _identify_env_source(self, purpose: str) -> str:

@@ -52,6 +52,7 @@ class GitHubTokenManager:
         'modules': ['GITHUB_APM_PAT', 'GITHUB_TOKEN', 'GH_TOKEN'],  # APM module access (GitHub)
         'ado_modules': ['ADO_APM_PAT'],  # APM module access (Azure DevOps)
         'artifactory_modules': ['ARTIFACTORY_APM_TOKEN'],  # APM module access (JFrog Artifactory)
+        'generic_modules': ['GIT_APM_PAT'],  # APM module access (generic git hosts: Gitea, GitLab, Bitbucket, etc.)
     }
     
     # Runtime-specific environment variable mappings
