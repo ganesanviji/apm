@@ -258,9 +258,15 @@ class GitHubPackageDownloader:
         # this eagerly (host-only key) and later resolve per-dependency (host+org),
         # users can see duplicate auth prompts. Keep constructor token state env-only
         # and resolve lazily per dependency during clone/validate flows.
-        self.github_token = self.token_manager.get_token_for_purpose('modules', env)
+        # Fallback to credential helpers if no env token is present.
+        env_token = self.token_manager.get_token_for_purpose('modules', env)
+        if env_token:
+            self.github_token = env_token
+            self._github_token_from_credential_fill = False
+        else:
+            self.github_token = self.token_manager.get_token_with_credential_fallback('modules', default_host(), env)
+            self._github_token_from_credential_fill = self.github_token is not None
         self.has_github_token = self.github_token is not None
-        self._github_token_from_credential_fill = False
 
         # Azure DevOps (env-only at init; lazy auth resolution happens per dep)
         self.ado_token = self.token_manager.get_token_for_purpose('ado_modules', env)
