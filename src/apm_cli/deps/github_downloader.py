@@ -1626,9 +1626,9 @@ class GitHubPackageDownloader:
         api_url = api_url_candidates[0]
 
         # Set up authentication headers
-        headers = {
-            'Accept': 'application/vnd.github.v3.raw'  # Returns raw content directly
-        }
+        headers = {}
+        if host == "github.com" or host.lower().endswith(".ghe.com"):
+            headers['Accept'] = 'application/vnd.github.v3.raw'
         if token:
             headers['Authorization'] = f'token {token}'
 
