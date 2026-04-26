@@ -766,6 +766,8 @@ class GitHubPackageDownloader:
         else:
             # Determine if this host should receive a GitHub token
             is_github = is_github_hostname(host)
+            # Check for Gitea
+            is_gitea = host.startswith("gitea.")
             # Thread the user-declared custom port (e.g. 7999 for Bitbucket DC) through
             # the URL builders so neither SSH nor HTTPS attempts silently drop it.
             port = dep_ref.port if dep_ref else None
@@ -774,8 +776,8 @@ class GitHubPackageDownloader:
             elif is_insecure:
                 netloc = f"{host}:{port}" if port else host
                 return f"http://{netloc}/{repo_ref}.git"
-            elif is_github and github_token:
-                # Only send GitHub tokens to GitHub hosts
+            elif (is_github or is_gitea) and github_token:
+                # Only send GitHub/Gitea tokens to GitHub/Gitea hosts
                 return build_https_clone_url(host, repo_ref, token=github_token, port=port)
             else:
                 # Generic hosts: plain HTTPS, let git credential helpers handle auth

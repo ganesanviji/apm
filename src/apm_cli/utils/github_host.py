@@ -177,6 +177,12 @@ def build_https_clone_url(
     Note: callers must avoid logging raw token-bearing URLs.
     """
     netloc = f"{host}:{port}" if port else host
+    # Gitea uses standard HTTPS basic auth if token provided as password
+    if host.startswith("gitea."):
+        if token:
+            return f"https://oauth2:{token}@{netloc}/{repo_ref}.git"
+        return f"https://{netloc}/{repo_ref}.git"
+    
     if token:
         # Use x-access-token format which is compatible with GitHub Enterprise and GH Actions
         return f"https://x-access-token:{token}@{netloc}/{repo_ref}.git"
