@@ -44,6 +44,9 @@ def is_github_hostname(hostname: Optional[str]) -> bool:
         return True
     if h.endswith(".ghe.com"):
         return True
+    # Gitea instances might just look like any other git host, which generic support handles.
+    # If the user is trying to connect to a specific Gitea host NOT listed here,
+    # the generic `is_valid_fqdn` check in `is_supported_git_host` should handle it.
     return False
 
 
