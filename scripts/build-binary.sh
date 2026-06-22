@@ -49,32 +49,15 @@ echo -e "${BLUE}Output binary: $BINARY_NAME${NC}"
 echo -e "${YELLOW}Cleaning previous builds...${NC}"
 rm -rf build/build/ dist/
 
-# Check if PyInstaller is available via uv
-if ! uv run pyinstaller --version &> /dev/null; then
-    echo -e "${RED}PyInstaller not found. Make sure dependencies are installed with: uv sync --extra build${NC}"
+# Check if PyInstaller is available
+if ! command -v pyinstaller &> /dev/null; then
+    echo -e "${RED}PyInstaller not found.${NC}"
     exit 1
-fi
-
-# Check if UPX is available (optional, for compression)
-if command -v upx &> /dev/null; then
-    echo -e "${GREEN}UPX found - binary will be compressed${NC}"
-else
-    echo -e "${YELLOW}UPX not found - binary will not be compressed (install with: brew install upx)${NC}"
-fi
-
-# Inject build SHA into version.py
-VERSION_FILE="src/apm_cli/version.py"
-BUILD_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "")
-if [ -n "$BUILD_SHA" ]; then
-    echo -e "${YELLOW}Injecting build SHA: $BUILD_SHA${NC}"
-    sed -i.bak "s/^__BUILD_SHA__ = None$/__BUILD_SHA__ = \"$BUILD_SHA\"/" "$VERSION_FILE"
-    # Guarantee restore on any exit (success, failure, or signal)
-    trap 'if [ -f "${VERSION_FILE}.bak" ]; then mv "${VERSION_FILE}.bak" "$VERSION_FILE"; fi' EXIT
 fi
 
 # Build binary
 echo -e "${YELLOW}Building binary with PyInstaller...${NC}"
-uv run pyinstaller build/apm.spec
+pyinstaller build/apm.spec
 
 # Check if build was successful (onedir mode creates dist/apm/apm)
 if [ ! -f "dist/apm/apm" ]; then
